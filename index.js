@@ -1,3 +1,4 @@
+alert('🎯 Objective Engine загрузился!');
 import { setExtensionPrompt, extension_prompt_types, eventSource, event_types } from '/script.js';
 import { extension_settings, saveSettingsDebounced } from '/scripts/extensions.js';
 
