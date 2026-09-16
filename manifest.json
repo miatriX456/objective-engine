@@ -1,0 +1,10 @@
+{
+    "display_name": "Objective Engine",
+    "loading_order": 1,
+    "requires": [],
+    "optional": [],
+    "js": "index.js",
+    "css": "",
+    "author": "miatriX",
+    "version": "1.0.0"
+}
