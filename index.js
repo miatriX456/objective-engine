@@ -1,8 +1,7 @@
-// Objective Engine v1.5.0 for SillyTavern
+// Objective Engine v1.6.0 for SillyTavern
 const extensionName = 'objective-engine';
 
 const PRESETS = [
-    // --- Романтика и интим ---
     { 
         id: 'kiss', 
         name: 'Первый поцелуй', 
@@ -21,8 +20,6 @@ const PRESETS = [
         title: 'Force {{char}} to genuinely confess deep romantic love to {{user}}',
         prompt: '{{char}} suppresses or fears admitting genuine love for {{user}}. At 0-30%, {{char}} denies romantic feelings, calls it friendship, or acts aloof. At 31-70%, {{char}} slips up, shows intense vulnerability, and hints at deep feelings. At 71-100%, {{char}} crumbles under {{user}}\'s emotional impact and utters a genuine, heartfelt love confession.'
     },
-
-    // --- Интриги и манипуляции ---
     { 
         id: 'secret', 
         name: 'Выведать тайну', 
@@ -35,8 +32,6 @@ const PRESETS = [
         title: 'Convince {{char}} to betray their allies or principles for {{user}}',
         prompt: '{{char}} is loyal to their faction, allies, or code of honor. At 0-30%, {{char}} rejects any suggestion of betrayal as madness. At 31-70%, {{char}} experiences deep moral conflict, questioning their allies\' actions. At 71-100%, {{char}} actively chooses {{user}} over their former loyalty and commits the betrayal.'
     },
-
-    // --- Драма и эмоции ---
     { 
         id: 'apology', 
         name: 'Искреннее покаяние', 
@@ -49,8 +44,6 @@ const PRESETS = [
         title: 'Cause {{char}} to break down crying or reveal raw emotional pain',
         prompt: '{{char}} wears a tough facade to hide trauma or weakness from {{user}}. At 0-30%, {{char}} maintains stoicism, sarcasm, or emotional coldness. At 31-70%, {{char}}\'s voice cracks and defensive walls crumble under pressure or empathy. At 71-100%, {{char}} completely breaks down, crying or venting raw emotional truth.'
     },
-
-    // --- Конфликт и сила ---
     { 
         id: 'surrender', 
         name: 'Капитуляция в бою', 
@@ -63,8 +56,6 @@ const PRESETS = [
         title: 'Persuade {{char}} to sign or accept a highly disadvantageous deal',
         prompt: '{{char}} is a cautious, self-interested negotiator. At 0-30%, {{char}} rejects unfair terms outright. At 31-70%, {{user}}\'s leverage, threats, or incentives make {{char}} reconsider. At 71-100%, {{char}} accepts the unfavorable contract despite the clear disadvantage.'
     },
-
-    // --- Кастом ---
     { 
         id: 'custom', 
         name: 'Свой вариант (Кастом)', 
@@ -83,7 +74,8 @@ const defaultState = {
     progress: 0,
     status: 'IN_PROGRESS',
     lastReason: 'Сцена началась...',
-    isCollapsed: false
+    isCollapsed: false,
+    aiIdeaInput: ''
 };
 
 let state = Object.assign({}, defaultState);
@@ -132,8 +124,61 @@ INSTRUCTIONS FOR {{char}} EVALUATION & BEHAVIOR:
 [OBJ_EVAL: {"progress": <0-100>, "reason": "<1-sentence evaluation of user's action in Russian>", "status": "<IN_PROGRESS|WIN|FAIL>"}]`;
 }
 
+async function generateCustomObjectiveFromAI() {
+    const userIdea = $('#obj-cfg-ai-idea').val().trim();
+    if (!userIdea) {
+        toastr.error('Введите идею для генерации цели (>_<)');
+        return;
+    }
+
+    const generationPrompt = `You are a roleplay engine generator. The user wants a custom quest objective.
+User's raw idea: "${userIdea}"
+
+Generate a JSON response with two fields:
+1. "title": A clear English goal title using {{char}} and {{user}} (e.g. "Convince {{char}} to go to the club with {{user}}").
+2. "prompt": A detailed English instruction for the AI on how {{char}} should behave, resist initially (0-30%), show cracks (31-70%), and fully comply (71-100%) regarding this specific goal. Use {{char}} and {{user}} macros.
+
+Return ONLY valid JSON format like this, with no markdown wrappers:
+{"title": "...", "prompt": "..."}`;
+
+    try {
+        toastr.info('Генерация цели через ИИ...');
+        
+        let responseText = '';
+        if (window.generateQuietPrompt) {
+            responseText = await window.generateQuietPrompt(generationPrompt);
+        } else {
+            throw new Error('generateQuietPrompt недоступен в текущей версии SillyTavern');
+        }
+
+        let cleaned = responseText.trim();
+        if (cleaned.startsWith('```json')) cleaned = cleaned.replace(/^```json/, '').replace(/```$/, '').trim();
+        else if (cleaned.startsWith('```')) cleaned = cleaned.replace(/^```/, '').replace(/```$/, '').trim();
+
+        const data = JSON.parse(cleaned);
+        if (data.title && data.prompt) {
+            state.presetId = 'custom';
+            state.title = data.title;
+            state.customPrompt = data.prompt;
+            state.currentTurn = 0;
+            state.progress = 0;
+            state.status = 'IN_PROGRESS';
+            state.lastReason = 'Цель успешно сгенерирована ИИ';
+            
+            saveSettings();
+            updateUI();
+            toastr.success('Цель сгенерирована (>_<)');
+        } else {
+            throw new Error('Неверный формат ответа ИИ');
+        }
+    } catch (err) {
+        console.error('[Objective Engine] Generation error:', err);
+        toastr.error('Ошибка генерации цели. Проверьте консоль.');
+    }
+}
+
 function parseBotMessage(text) {
-    if (!text) return text;
+    if (!state.enabled || !text) return text;
     const regex = /\[OBJ_EVAL:\s*(\{.*?\})\]/s;
     const match = text.match(regex);
 
@@ -163,6 +208,12 @@ function parseBotMessage(text) {
 }
 
 function updateUI() {
+    if (!state.enabled) {
+        $('#obj-widget').hide();
+    } else {
+        $('#obj-widget').show();
+    }
+
     $('#obj-title').text(state.title || 'Без цели');
     $('#obj-progress-bar').css('width', `${state.progress}%`);
     $('#obj-progress-text').text(`${state.progress}%`);
@@ -195,9 +246,11 @@ function updateUI() {
     if (state.presetId === 'custom') {
         $('#obj-custom-title-block').show();
         $('#obj-custom-prompt-block').show();
+        $('#obj-ai-gen-block').show();
     } else {
         $('#obj-custom-title-block').hide();
         $('#obj-custom-prompt-block').hide();
+        $('#obj-ai-gen-block').hide();
     }
 }
 
@@ -211,7 +264,7 @@ const widgetHtml = `
             <strong id="obj-title" style="font-size: 11px; color: #f39c12; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px;">Цель</strong>
             <div style="display: flex; align-items: center; gap: 6px;">
                 <span id="obj-status-badge" style="font-size: 9px; padding: 2px 6px; border-radius: 4px; font-weight: bold; background: #3b82f6;">IN_PROGRESS</span>
-                <button id="obj-btn-collapse" style="background: none; border: none; color: #aaa; font-size: 12px; cursor: pointer; padding: 0 2px;">_</button>
+                <button id="obj-btn-collapse" style="background: none; border: none; color: #aaa; font-size: 12px; cursor: pointer; padding: 0 2px;">[-]</button>
             </div>
         </div>
         <div style="background: #222; height: 7px; border-radius: 4px; overflow: hidden; margin-bottom: 4px; border: 1px solid #333;">
@@ -242,6 +295,16 @@ function buildSettingsHtml() {
                 ${optionsHtml}
             </select>
         </label>
+
+        <div id="obj-ai-gen-block" style="display: none; margin-bottom: 10px; padding: 8px; background: rgba(243, 156, 18, 0.05); border: 1px dashed #f39c12; border-radius: 6px;">
+            <label style="display: block; font-size: 11px; margin-bottom: 4px; color: #f39c12;">
+                Автогенерация через ИИ (напиши идею по-русски):
+            </label>
+            <div style="display: flex; gap: 6px;">
+                <input type="text" id="obj-cfg-ai-idea" class="text_pole" style="flex: 1; margin: 0; font-size: 11px;" placeholder="Пример: уговорить пойти в клуб">
+                <button id="obj-btn-generate" class="menu_button" style="background: #f39c12; color: #000; font-weight: bold; padding: 0 10px; margin: 0;">Создать</button>
+            </div>
+        </div>
 
         <div id="obj-custom-title-block" style="display: none; margin-bottom: 8px;">
             <label style="display: block; font-size: 12px;">
@@ -296,6 +359,7 @@ function init() {
             $('#obj-cfg-enabled').on('change', function() {
                 state.enabled = $(this).is(':checked');
                 saveSettings();
+                updateUI();
             });
 
             $('#obj-cfg-preset').on('change', function() {
@@ -314,6 +378,10 @@ function init() {
 
                 saveSettings();
                 updateUI();
+            });
+
+            $('#obj-btn-generate').on('click', async function() {
+                await generateCustomObjectiveFromAI();
             });
 
             $('#obj-cfg-custom-title').on('input', function() {
