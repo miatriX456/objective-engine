@@ -1,9 +1,20 @@
-// Objective Engine v1.1.0 for SillyTavern (Mobile Friendly)
+// Objective Engine v1.2.0 for SillyTavern (Presets & Mobile UI)
 const extensionName = 'objective-engine';
+
+// Набор встроенных пресетов
+const PRESETS = [
+    { id: 'custom', name: '✏️ Свой вариант (Кастом)', title: '' },
+    { id: 'love', name: '❤️ Признание в любви', title: 'Заставить персонажа искренне признаться в чувствах' },
+    { id: 'secret', name: '🤫 Выведать тайну', title: 'Узнать тщательно скрываемый секрет или компромат' },
+    { id: 'apology', name: '🙏 Искреннее покаяние', title: 'Заставить персонажа признать вину и попросить прощения' },
+    { id: 'seduce', name: '🔥 Соблазнение', title: 'Склонить персонажа к романтической / физической близости' },
+    { id: 'deal', name: '🤝 Заключить сделку', title: 'Убедить персонажа принять невыгодное или опасное предложение' }
+];
 
 const defaultState = {
     enabled: true,
-    title: 'Заставить признаться в грехе',
+    presetId: 'love',
+    title: PRESETS[1].title,
     maxTurns: 10,
     currentTurn: 0,
     progress: 0,
@@ -73,7 +84,7 @@ function parseBotMessage(text) {
 }
 
 function updateUI() {
-    $('#obj-title').text(state.title);
+    $('#obj-title').text(state.title || 'Без цели');
     $('#obj-progress-bar').css('width', `${state.progress}%`);
     $('#obj-progress-text').text(`${state.progress}%`);
     $('#obj-turns').text(`${state.currentTurn}/${state.maxTurns}`);
@@ -86,7 +97,6 @@ function updateUI() {
     $('#obj-status-badge').css('background-color', statusBg).text(state.status);
     $('#obj-mini-text').text(`🎯 ${state.progress}% (${state.currentTurn}/${state.maxTurns})`);
 
-    // Переключение между полной и свернутой версией
     if (state.isCollapsed) {
         $('#obj-full-view').hide();
         $('#obj-mini-view').show();
@@ -97,20 +107,24 @@ function updateUI() {
         $('#obj-widget').css({'width': '92%', 'padding': '8px 12px'});
     }
 
-    $('#obj-cfg-title').val(state.title);
-    $('#obj-cfg-turns').val(state.maxTurns);
+    // Синхронизация меню настроек
     $('#obj-cfg-enabled').prop('checked', state.enabled);
+    $('#obj-cfg-preset').val(state.presetId);
+    $('#obj-cfg-turns').val(state.maxTurns);
+    $('#obj-cfg-custom-title').val(state.title);
+
+    if (state.presetId === 'custom') {
+        $('#obj-custom-title-block').show();
+    } else {
+        $('#obj-custom-title-block').hide();
+    }
 }
 
 const widgetHtml = `
 <div id="obj-widget" style="position: fixed; top: 55px; left: 50%; transform: translateX(-50%); width: 92%; max-width: 360px; background: rgba(18, 18, 22, 0.95); border: 1px solid #f39c12; border-radius: 8px; padding: 8px 12px; color: #fff; z-index: 99999; font-family: sans-serif; box-shadow: 0 4px 15px rgba(0,0,0,0.8); backdrop-filter: blur(5px); transition: all 0.2s ease;">
-    
-    <!-- Свернутый режим (Мини-кнопка) -->
     <div id="obj-mini-view" style="display: none; align-items: center; justify-content: center; cursor: pointer;">
         <span id="obj-mini-text" style="font-size: 11px; font-weight: bold; color: #f39c12;">🎯 0%</span>
     </div>
-
-    <!-- Полный режим -->
     <div id="obj-full-view">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
             <strong id="obj-title" style="font-size: 11px; color: #f39c12; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px;">Цель</strong>
@@ -131,26 +145,41 @@ const widgetHtml = `
 </div>
 `;
 
-const settingsHtml = `
-<div class="extension_settings_block" style="padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; margin-top: 10px;">
-    <h4 style="margin: 0 0 10px 0; color: #f39c12;">🎯 Objective Engine</h4>
-    <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 12px;">
-        <input type="checkbox" id="obj-cfg-enabled">
-        <span>Включить движок квестов</span>
-    </label>
-    <label style="display: block; margin-bottom: 8px; font-size: 12px;">
-        Цель сцены:
-        <input type="text" id="obj-cfg-title" class="text_pole" style="width: 100%; margin-top: 2px;">
-    </label>
-    <label style="display: block; margin-bottom: 10px; font-size: 12px;">
-        Лимит ходов:
-        <input type="number" id="obj-cfg-turns" class="text_pole" style="width: 100%; margin-top: 2px;" min="1" max="50">
-    </label>
-    <button id="obj-btn-reset" class="menu_button" style="width: 100%; background: #e74c3c; color: white;">
-        🔄 Начать квест заново
-    </button>
-</div>
-`;
+function buildSettingsHtml() {
+    const optionsHtml = PRESETS.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+    return `
+    <div class="extension_settings_block" style="padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; margin-top: 10px;">
+        <h4 style="margin: 0 0 10px 0; color: #f39c12;">🎯 Objective Engine</h4>
+        <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 12px;">
+            <input type="checkbox" id="obj-cfg-enabled">
+            <span>Включить движок квестов</span>
+        </label>
+        
+        <label style="display: block; margin-bottom: 8px; font-size: 12px;">
+            Выберите готовый пресет:
+            <select id="obj-cfg-preset" class="text_pole" style="width: 100%; margin-top: 2px; background: #222; color: #fff;">
+                ${optionsHtml}
+            </select>
+        </label>
+
+        <div id="obj-custom-title-block" style="display: none; margin-bottom: 8px;">
+            <label style="display: block; font-size: 12px;">
+                Своя цель:
+                <input type="text" id="obj-cfg-custom-title" class="text_pole" style="width: 100%; margin-top: 2px;" placeholder="Введите описание цели...">
+            </label>
+        </div>
+
+        <label style="display: block; margin-bottom: 10px; font-size: 12px;">
+            Лимит ходов:
+            <input type="number" id="obj-cfg-turns" class="text_pole" style="width: 100%; margin-top: 2px;" min="1" max="50">
+        </label>
+        
+        <button id="obj-btn-reset" class="menu_button" style="width: 100%; background: #e74c3c; color: white;">
+            🔄 Сбросить и начать квест
+        </button>
+    </div>
+    `;
+}
 
 function init() {
     loadSettings();
@@ -159,7 +188,6 @@ function init() {
         $('body').append(widgetHtml);
     }
 
-    // События сворачивания/разворачивания
     $('#obj-btn-collapse').on('click', function(e) {
         e.stopPropagation();
         state.isCollapsed = true;
@@ -174,23 +202,45 @@ function init() {
     });
 
     const checkSettingsPanel = setInterval(() => {
-        if ($('#extensions_settings').length && $('#obj-cfg-title').length === 0) {
-            $('#extensions_settings').append(settingsHtml);
-            
+        if ($('#extensions_settings').length && $('#obj-cfg-preset').length === 0) {
+            $('#extensions_settings').append(buildSettingsHtml());
+
             $('#obj-cfg-enabled').on('change', function() {
                 state.enabled = $(this).is(':checked');
                 saveSettings();
             });
-            $('#obj-cfg-title').on('input', function() {
-                state.title = $(this).val();
+
+            $('#obj-cfg-preset').on('change', function() {
+                const selectedId = $(this).val();
+                state.presetId = selectedId;
+                const presetObj = PRESETS.find(p => p.id === selectedId);
+
+                if (selectedId !== 'custom' && presetObj) {
+                    state.title = presetObj.title;
+                }
+                state.currentTurn = 0;
+                state.progress = 0;
+                state.status = 'IN_PROGRESS';
+                state.lastReason = 'Новый пресет выбран';
+
                 saveSettings();
                 updateUI();
             });
+
+            $('#obj-cfg-custom-title').on('input', function() {
+                if (state.presetId === 'custom') {
+                    state.title = $(this).val();
+                    saveSettings();
+                    updateUI();
+                }
+            });
+
             $('#obj-cfg-turns').on('change', function() {
                 state.maxTurns = parseInt($(this).val()) || 10;
                 saveSettings();
                 updateUI();
             });
+
             $('#obj-btn-reset').on('click', function() {
                 state.currentTurn = 0;
                 state.progress = 0;
@@ -199,6 +249,7 @@ function init() {
                 saveSettings();
                 updateUI();
             });
+
             updateUI();
         }
     }, 1000);
