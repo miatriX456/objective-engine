@@ -1,37 +1,70 @@
-// Objective Engine v1.4.0 for SillyTavern (English System Prompts & Macros)
+// Objective Engine v1.5.0 for SillyTavern
 const extensionName = 'objective-engine';
 
 const PRESETS = [
+    // --- Романтика и интим ---
+    { 
+        id: 'kiss', 
+        name: 'Первый поцелуй', 
+        title: 'Initiate a passionate kiss with {{char}}',
+        prompt: '{{char}} tries to maintain physical distance and emotional restraint with {{user}}. At 0-30%, {{char}} pulls away, avoids eye contact, or sets boundaries. At 31-70%, {{char}} shows rising attraction, breathlessness, and hesitation. At 71-100%, {{char}} completely gives in to the moment and initiates or enthusiastically accepts a kiss.'
+    },
+    { 
+        id: 'intimacy', 
+        name: 'Полная близость (Секс)', 
+        title: 'Lead {{char}} into full explicit physical intimacy (sex)',
+        prompt: '{{char}} resists jumping into full physical intimacy with {{user}}. At 0-30%, {{char}} keeps clothes on, enforces personal boundaries, or deflects heavy flirting. At 31-70%, physical arousal and sexual tension build, with boundaries blurring. At 71-100%, {{char}} surrenders to desire, initiating or actively engaging in explicit sexual intimacy.'
+    },
     { 
         id: 'love', 
         name: 'Признание в любви', 
-        title: 'Force {{char}} to genuinely confess feelings to {{user}}',
-        prompt: '{{char}} suppresses or denies romantic feelings for {{user}}. At 0-30% progress, {{char}} deflects, acts flustered, or denies any romantic interest. At 31-70%, {{char}} shows noticeable emotional tension, slip-ups, and hesitation. At 71-100%, {{char}} crumbles under {{user}}\'s sincerity and fully confesses.'
+        title: 'Force {{char}} to genuinely confess deep romantic love to {{user}}',
+        prompt: '{{char}} suppresses or fears admitting genuine love for {{user}}. At 0-30%, {{char}} denies romantic feelings, calls it friendship, or acts aloof. At 31-70%, {{char}} slips up, shows intense vulnerability, and hints at deep feelings. At 71-100%, {{char}} crumbles under {{user}}\'s emotional impact and utters a genuine, heartfelt love confession.'
     },
+
+    // --- Интриги и манипуляции ---
     { 
         id: 'secret', 
         name: 'Выведать тайну', 
-        title: 'Extract a guarded secret from {{char}}',
-        prompt: '{{char}} holds a critical secret from {{user}} and defends it fiercely. At 0-30%, {{char}} lies, acts suspicious, or shifts the topic. At 31-70%, {{char}} stumbles over contradictions or exhibits nervousness. Progress increases ONLY through solid evidence, clever pressure, or deep emotional trust built by {{user}}.'
+        title: 'Extract a dangerous or heavily guarded secret from {{char}}',
+        prompt: '{{char}} holds a critical secret from {{user}} and protects it fiercely. At 0-30%, {{char}} lies, deflects, or threatens {{user}} to drop it. At 31-70%, {{char}} stumbles over contradictions or leaks minor details under pressure. Progress increases ONLY via clever investigation, blackmail, or deep trust. At 71-100%, {{char}} reveals the entire secret.'
     },
+    { 
+        id: 'betrayal', 
+        name: 'Склонить к предательству', 
+        title: 'Convince {{char}} to betray their allies or principles for {{user}}',
+        prompt: '{{char}} is loyal to their faction, allies, or code of honor. At 0-30%, {{char}} rejects any suggestion of betrayal as madness. At 31-70%, {{char}} experiences deep moral conflict, questioning their allies\' actions. At 71-100%, {{char}} actively chooses {{user}} over their former loyalty and commits the betrayal.'
+    },
+
+    // --- Драма и эмоции ---
     { 
         id: 'apology', 
         name: 'Искреннее покаяние', 
-        title: 'Make {{char}} admit fault and apologize to {{user}}',
-        prompt: '{{char}} committed an offense against {{user}} but maintains defensive pride. Initially, {{char}} counter-attacks or shifts blame. Progress increases when {{user}} presents undeniable logic or emotional weight that pierces {{char}}\'s pride.'
+        title: 'Make {{char}} admit fault and beg {{user}} for forgiveness',
+        prompt: '{{char}} committed a wrong against {{user}} but hides behind pride. At 0-30%, {{char}} counter-accuses, rationalizes actions, or acts arrogant. At 31-70%, guilt sets in as {{user}} exposes the damage caused. At 71-100%, {{char}}\'s pride collapses, offering a sincere apology or begging for forgiveness.'
     },
     { 
-        id: 'seduce', 
-        name: 'Соблазнение', 
-        title: 'Seduce {{char}} into romantic or physical intimacy',
-        prompt: '{{char}} attempts to maintain personal boundaries against {{user}}. At low progress, {{char}} holds strong distance or uses sarcasm. As progress rises, {{char}} loses composure, giving in to the romantic atmosphere, physical cues, and {{user}}\'s initiative.'
+        id: 'breakdown', 
+        name: 'Эмоциональный слом', 
+        title: 'Cause {{char}} to break down crying or reveal raw emotional pain',
+        prompt: '{{char}} wears a tough facade to hide trauma or weakness from {{user}}. At 0-30%, {{char}} maintains stoicism, sarcasm, or emotional coldness. At 31-70%, {{char}}\'s voice cracks and defensive walls crumble under pressure or empathy. At 71-100%, {{char}} completely breaks down, crying or venting raw emotional truth.'
+    },
+
+    // --- Конфликт и сила ---
+    { 
+        id: 'surrender', 
+        name: 'Капитуляция в бою', 
+        title: 'Force {{char}} to surrender in combat or yield unconditionally',
+        prompt: '{{char}} is fighting {{user}} or resisting physical capture. At 0-30%, {{char}} strikes back fiercely and refuses to back down. At 31-70%, fatigue, damage, or tactical disadvantage makes {{char}} hesitate. At 71-100%, {{char}} drops weapons and surrenders unconditionally.'
     },
     { 
         id: 'deal', 
-        name: 'Заключить сделку', 
-        title: 'Persuade {{char}} to accept a risky or unfavorable proposal',
-        prompt: '{{char}} is pragmatic, cautious, and highly skeptical of {{user}}\'s terms. Progress increases ONLY through strong leverage, clear mutual benefit, or pressing {{char}}\'s personal weaknesses. Idle conversation must not increase progress.'
+        name: 'Кабальная сделка', 
+        title: 'Persuade {{char}} to sign or accept a highly disadvantageous deal',
+        prompt: '{{char}} is a cautious, self-interested negotiator. At 0-30%, {{char}} rejects unfair terms outright. At 31-70%, {{user}}\'s leverage, threats, or incentives make {{char}} reconsider. At 71-100%, {{char}} accepts the unfavorable contract despite the clear disadvantage.'
     },
+
+    // --- Кастом ---
     { 
         id: 'custom', 
         name: 'Свой вариант (Кастом)', 
@@ -42,7 +75,7 @@ const PRESETS = [
 
 const defaultState = {
     enabled: true,
-    presetId: 'love',
+    presetId: 'kiss',
     title: PRESETS[0].title,
     customPrompt: PRESETS[0].prompt,
     maxTurns: 10,
@@ -141,7 +174,7 @@ function updateUI() {
     if (state.status === 'FAIL') statusBg = '#ef4444';
 
     $('#obj-status-badge').css('background-color', statusBg).text(state.status);
-    $('#obj-mini-text').text(`🎯 ${state.progress}% (${state.currentTurn}/${state.maxTurns})`);
+    $('#obj-mini-text').text(`Цель: ${state.progress}% (${state.currentTurn}/${state.maxTurns})`);
 
     if (state.isCollapsed) {
         $('#obj-full-view').hide();
@@ -171,14 +204,14 @@ function updateUI() {
 const widgetHtml = `
 <div id="obj-widget" style="position: fixed; top: 55px; left: 50%; transform: translateX(-50%); width: 92%; max-width: 360px; background: rgba(18, 18, 22, 0.95); border: 1px solid #f39c12; border-radius: 8px; padding: 8px 12px; color: #fff; z-index: 99999; font-family: sans-serif; box-shadow: 0 4px 15px rgba(0,0,0,0.8); backdrop-filter: blur(5px); transition: all 0.2s ease;">
     <div id="obj-mini-view" style="display: none; align-items: center; justify-content: center; cursor: pointer;">
-        <span id="obj-mini-text" style="font-size: 11px; font-weight: bold; color: #f39c12;">🎯 0%</span>
+        <span id="obj-mini-text" style="font-size: 11px; font-weight: bold; color: #f39c12;">Цель: 0%</span>
     </div>
     <div id="obj-full-view">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
             <strong id="obj-title" style="font-size: 11px; color: #f39c12; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px;">Цель</strong>
             <div style="display: flex; align-items: center; gap: 6px;">
                 <span id="obj-status-badge" style="font-size: 9px; padding: 2px 6px; border-radius: 4px; font-weight: bold; background: #3b82f6;">IN_PROGRESS</span>
-                <button id="obj-btn-collapse" style="background: none; border: none; color: #aaa; font-size: 12px; cursor: pointer; padding: 0 2px;">➖</button>
+                <button id="obj-btn-collapse" style="background: none; border: none; color: #aaa; font-size: 12px; cursor: pointer; padding: 0 2px;">_</button>
             </div>
         </div>
         <div style="background: #222; height: 7px; border-radius: 4px; overflow: hidden; margin-bottom: 4px; border: 1px solid #333;">
@@ -197,7 +230,7 @@ function buildSettingsHtml() {
     const optionsHtml = PRESETS.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
     return `
     <div class="extension_settings_block" style="padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; margin-top: 10px;">
-        <h4 style="margin: 0 0 10px 0; color: #f39c12;">🎯 Objective Engine</h4>
+        <h4 style="margin: 0 0 10px 0; color: #f39c12;">Objective Engine</h4>
         <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 12px;">
             <input type="checkbox" id="obj-cfg-enabled">
             <span>Включить движок квестов</span>
@@ -230,7 +263,7 @@ function buildSettingsHtml() {
         </label>
         
         <button id="obj-btn-reset" class="menu_button" style="width: 100%; background: #e74c3c; color: white;">
-            🔄 Сбросить и начать квест
+            Сбросить и начать квест
         </button>
     </div>
     `;
