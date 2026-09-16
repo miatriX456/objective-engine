@@ -1,5 +1,5 @@
-import { setExtensionPrompt, extension_prompt_types, eventSource, event_types } from '../../../../script.js';
-import { extension_settings, saveSettingsDebounced } from '../../../extensions.js';
+import { setExtensionPrompt, extension_prompt_types, eventSource, event_types } from '/script.js';
+import { extension_settings, saveSettingsDebounced } from '/scripts/extensions.js';
 
 const extensionName = 'objective-engine';
 
@@ -13,7 +13,7 @@ const defaultState = {
     lastReason: 'Сцена началась'
 };
 
-extension_settings[extensionName] = extension_settings[extensionName] || defaultState;
+extension_settings[extensionName] = Object.assign({}, defaultState, extension_settings[extensionName] || {});
 let state = extension_settings[extensionName];
 
 function save() {
@@ -40,17 +40,22 @@ Rules:
 }
 
 function applyPrompt() {
-    setExtensionPrompt(extensionName, buildPrompt(), extension_prompt_types.IN_CHAT, 0);
+    try {
+        setExtensionPrompt(extensionName, buildPrompt(), extension_prompt_types.IN_CHAT, 0);
+    } catch (e) {
+        console.error('[Objective Engine] Error applying prompt:', e);
+    }
 }
 
 function parseBotResponse(messageText) {
+    if (!messageText) return messageText;
     const regex = /\[OBJ_EVAL:\s*(\{.*?\})\]/s;
     const match = messageText.match(regex);
 
     if (match) {
         try {
             const data = JSON.parse(match[1]);
-            state.progress = Math.min(100, Math.max(0, data.progress));
+            state.progress = Math.min(100, Math.max(0, Number(data.progress) || 0));
             state.lastReason = data.reason || state.lastReason;
             if (data.status) state.status = data.status;
             state.currentTurn += 1;
@@ -83,38 +88,115 @@ function updateUI() {
     if (state.status === 'FAIL') statusColor = '#ef4444';
 
     $('#obj-status-badge').css('background-color', statusColor).text(state.status);
+
+    $('#obj-input-title').val(state.title);
+    $('#obj-input-turns').val(state.maxTurns);
+    $('#obj-checkbox-enabled').prop('checked', state.enabled);
 }
 
-const panelHtml = `
-<div id="obj-widget" style="position: fixed; top: 60px; right: 20px; width: 280px; background: rgba(20,20,20,0.9); border: 1px solid #444; border-radius: 8px; padding: 12px; color: #fff; z-index: 9999; font-family: sans-serif; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-        <strong id="obj-title" style="font-size: 12px; color: #f39c12;">Цель</strong>
-        <span id="obj-status-badge" style="font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: bold;">IN_PROGRESS</span>
+const widgetHtml = `
+<div id="obj-widget" style="position: fixed; top: 5px; left: 50%; transform: translateX(-50%); width: 92%; max-width: 360px; background: rgba(18, 18, 18, 0.95); border: 1px solid #444; border-radius: 8px; padding: 8px 12px; color: #fff; z-index: 999999; font-family: sans-serif; box-shadow: 0 4px 15px rgba(0,0,0,0.8); backdrop-filter: blur(5px);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+        <strong id="obj-title" style="font-size: 11px; color: #f39c12; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px;">Цель</strong>
+        <span id="obj-status-badge" style="font-size: 9px; padding: 2px 6px; border-radius: 4px; font-weight: bold;">IN_PROGRESS</span>
     </div>
-    <div style="background: #333; height: 10px; border-radius: 5px; overflow: hidden; margin-bottom: 6px;">
+    <div style="background: #222; height: 7px; border-radius: 4px; overflow: hidden; margin-bottom: 4px; border: 1px solid #333;">
         <div id="obj-progress-bar" style="width: 0%; height: 100%; background: #3b82f6; transition: width 0.3s;"></div>
     </div>
-    <div style="display: flex; justify-content: space-between; font-size: 11px; color: #aaa; margin-bottom: 6px;">
+    <div style="display: flex; justify-content: space-between; font-size: 10px; color: #aaa; margin-bottom: 3px;">
         <span>Прогресс: <b id="obj-progress-text" style="color:#fff">0%</b></span>
         <span>Ход: <b id="obj-turns" style="color:#fff">0/10</b></span>
     </div>
-    <div id="obj-reason" style="font-size: 10px; font-style: italic; color: #ccc; border-top: 1px solid #333; padding-top: 4px;">Сцена началась...</div>
+    <div id="obj-reason" style="font-size: 9px; font-style: italic; color: #bbb; border-top: 1px solid #333; padding-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Сцена началась...</div>
 </div>
 `;
 
-jQuery(async () => {
-    $('body').append(panelHtml);
+const settingsHtml = `
+<div class="objective-engine-settings" style="padding: 10px; background: rgba(0,0,0,0.2); border-radius: 5px; margin-top: 10px;">
+    <h4>🎯 Objective Engine</h4>
+    <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+        <input type="checkbox" id="obj-checkbox-enabled">
+        <span>Включить движок квестов</span>
+    </label>
+    
+    <label style="display: block; margin-bottom: 6px; font-size: 12px;">
+        Название цели / квеста:
+        <input type="text" id="obj-input-title" class="text_pole" style="width: 100%; margin-top: 2px;">
+    </label>
+    
+    <label style="display: block; margin-bottom: 10px; font-size: 12px;">
+        Лимит ходов:
+        <input type="number" id="obj-input-turns" class="text_pole" style="width: 100%; margin-top: 2px;" min="1" max="50">
+    </label>
+    
+    <button id="obj-btn-reset" class="menu_button" style="width: 100%; background: #e74c3c; color: white;">
+        🔄 Сбросить квест
+    </button>
+</div>
+`;
+
+jQuery(() => {
+    if ($('#obj-widget').length === 0) {
+        $('body').append(widgetHtml);
+    }
+
+    const injectSettings = () => {
+        if ($('#extensions_settings').length && $('.objective-engine-settings').length === 0) {
+            $('#extensions_settings').append(settingsHtml);
+            bindMenuEvents();
+        }
+    };
+
+    injectSettings();
+    const observer = new MutationObserver(injectSettings);
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    function bindMenuEvents() {
+        $('#obj-checkbox-enabled').off('change').on('change', function() {
+            state.enabled = $(this).is(':checked');
+            save();
+            applyPrompt();
+        });
+
+        $('#obj-input-title').off('input').on('input', function() {
+            state.title = $(this).val();
+            save();
+            updateUI();
+            applyPrompt();
+        });
+
+        $('#obj-input-turns').off('change').on('change', function() {
+            state.maxTurns = parseInt($(this).val()) || 10;
+            save();
+            updateUI();
+            applyPrompt();
+        });
+
+        $('#obj-btn-reset').off('click').on('click', function() {
+            state.currentTurn = 0;
+            state.progress = 0;
+            state.status = 'IN_PROGRESS';
+            state.lastReason = 'Квест сброшен';
+            save();
+            updateUI();
+            applyPrompt();
+            alert('Квест сброшен!');
+        });
+    }
+
     updateUI();
     applyPrompt();
 
-    eventSource.on(event_types.CHARACTER_MESSAGE_RENDERED, (msgId) => {
-        const ctx = window.getContext();
-        if (ctx && ctx.chat && ctx.chat[msgId]) {
-            const cleanText = parseBotResponse(ctx.chat[msgId].mes);
-            if (cleanText !== ctx.chat[msgId].mes) {
-                ctx.chat[msgId].mes = cleanText;
-                $(`.message[data-id="${msgId}"] .mes_text`).text(cleanText);
+    if (window.eventSource && window.event_types) {
+        eventSource.on(event_types.CHARACTER_MESSAGE_RENDERED, (msgId) => {
+            const ctx = window.getContext ? window.getContext() : null;
+            if (ctx && ctx.chat && ctx.chat[msgId]) {
+                const cleanText = parseBotResponse(ctx.chat[msgId].mes);
+                if (cleanText !== ctx.chat[msgId].mes) {
+                    ctx.chat[msgId].mes = cleanText;
+                    $(`.message[data-id="${msgId}"] .mes_text`).text(cleanText);
+                }
             }
-        }
-    });
+        });
+    }
 });
