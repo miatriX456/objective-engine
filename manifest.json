@@ -1,7 +1,11 @@
 {
     "display_name": "Objective Engine",
-    "loading_order": 1,
+    "loading_order": 100,
+    "requires": [],
+    "optional": [],
     "js": "index.js",
-    "author": "miatriX",
-    "version": "1.0.0"
+    "css": "style.css",
+    "author": "Community",
+    "version": "1.5.0",
+    "description": "Dynamic goal and quest tracking engine for roleplay scenarios using structured AI self-evaluation."
 }

@@ -1,0 +1,19 @@
+/* Objective Engine Styles */
+#obj-widget {
+    user-select: none;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+#obj-widget button:hover {
+    opacity: 0.8;
+}
+
+#obj-progress-bar {
+    box-shadow: 0 0 8px rgba(243, 156, 18, 0.4);
+}
+
+.extension_settings_block #obj-cfg-custom-prompt {
+    resize: vertical;
+    min-height: 60px;
+}
